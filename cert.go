@@ -1,7 +1,6 @@
 package simpleacme
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -9,7 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
+	"os"
 	"time"
 )
 
@@ -38,9 +37,13 @@ func (c *Client) createCert(ctx context.Context, csr []byte, cert string) error 
 	if err != nil {
 		return err
 	}
-	buf := &bytes.Buffer{}
+	w, err := os.Create(cert)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
 	for _, b := range ders {
-		err := pem.Encode(buf, &pem.Block{
+		err := pem.Encode(w, &pem.Block{
 			Type:  certType,
 			Bytes: b,
 		})
@@ -48,5 +51,5 @@ func (c *Client) createCert(ctx context.Context, csr []byte, cert string) error 
 			return err
 		}
 	}
-	return ioutil.WriteFile(cert, buf.Bytes(), 0644)
+	return nil
 }
