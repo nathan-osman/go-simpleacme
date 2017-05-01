@@ -28,14 +28,17 @@ func loadKey(filename string) (*rsa.PrivateKey, error) {
 
 // generateKey creates a new 2048-bit RSA key and writes it to the specified
 // file.
-func generateKey(filename string) error {
+func generateKey(filename string) (*rsa.PrivateKey, error) {
 	k, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	b := pem.EncodeToMemory(&pem.Block{
 		Type:  keyType,
 		Bytes: x509.MarshalPKCS1PrivateKey(k),
 	})
-	return ioutil.WriteFile(filename, b, 0600)
+	if err := ioutil.WriteFile(filename, b, 0600); err != nil {
+		return nil, err
+	}
+	return k, nil
 }
