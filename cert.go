@@ -8,14 +8,20 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"time"
 )
 
 const certType = "CERTIFICATE"
 
+var ErrNoDomains = errors.New("no domain names provided")
+
 // createCSR creates a certificate signing requests for the provided domains.
 func createCSR(k *rsa.PrivateKey, domains ...string) ([]byte, error) {
+	if len(domains) == 0 {
+		return nil, ErrNoDomains
+	}
 	return x509.CreateCertificateRequest(
 		rand.Reader,
 		&x509.CertificateRequest{
