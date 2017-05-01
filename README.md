@@ -17,12 +17,9 @@ The following example demonstrates basic usage of go-simpleacme:
 
     ctx := context.TODO()
 
-    // Create the client
-    c := simpleacme.New()
-
-    // Initialize the client with a private key - if the file
-    // does not exist, a new key is generated
-    if err := c.Initialize(ctx, "account.key"); err != nil {
+    // Create the client - the key will be generated if it does not exist
+    c, err := simpleacme.New(ctx, "account.key")
+    if err != nil {
         // handle error
     }
 

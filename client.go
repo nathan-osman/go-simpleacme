@@ -11,33 +11,30 @@ type Client struct {
 	client *acme.Client
 }
 
-// New creates a new ACME client.
-func New() *Client {
-	return &Client{
-		client: &acme.Client{},
-	}
-}
-
-// Initialize performs account registration (if necessary).
-func (c *Client) Initialize(ctx context.Context, key string) error {
+// New creates a new ACME client. If the key does not exist, a new one is
+// generated and registered.
+func New(ctx context.Context, key string) (*Client, error) {
+	client := &acme.Client{}
 	k, err := loadKey(key)
 	if err != nil {
 		if os.IsNotExist(err) {
-			k, err := generateKey(key)
+			k, err = generateKey(key)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			c.client.Key = k
-			if _, err := c.client.Register(ctx, nil, acme.AcceptTOS); err != nil {
-				return err
+			client.Key = k
+			if _, err := client.Register(ctx, nil, acme.AcceptTOS); err != nil {
+				return nil, err
 			}
-			return nil
 		} else {
-			return err
+			return nil, err
 		}
+	} else {
+		client.Key = k
 	}
-	c.client.Key = k
-	return nil
+	return &Client{
+		client: client,
+	}, nil
 }
 
 // Create attempts to create a TLS certificate and private key for the
