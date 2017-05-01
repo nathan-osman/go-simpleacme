@@ -10,9 +10,7 @@ import (
 	"golang.org/x/crypto/acme"
 )
 
-var (
-	ErrNoChallenges = errors.New("no suitable challenge found")
-)
+var ErrNoChallenges = errors.New("no suitable challenge found")
 
 // findChallenge attempts to find a suitable challenge. Currently, only the
 // http-01 challenge is supported.
@@ -56,7 +54,7 @@ func (c *Client) performChallenge(ctx context.Context, chal *acme.Challenge, add
 	go func() {
 		http.Serve(l, mux)
 	}()
-	chal, err = c.client.Accept(ctx, chal)
+	_, err = c.client.Accept(ctx, chal)
 	if err != nil {
 		return err
 	}

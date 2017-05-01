@@ -12,7 +12,7 @@ type Client struct {
 }
 
 // New creates a new ACME client.
-func New(filename string) *Client {
+func New() *Client {
 	return &Client{
 		client: &acme.Client{},
 	}
