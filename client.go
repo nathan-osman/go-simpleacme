@@ -27,10 +27,10 @@ func (c *Client) Initialize(ctx context.Context, key string) error {
 			if err != nil {
 				return err
 			}
+			c.client.Key = k
 			if _, err := c.client.Register(ctx, nil, acme.AcceptTOS); err != nil {
 				return err
 			}
-			c.client.Key = k
 			return nil
 		} else {
 			return err
