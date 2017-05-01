@@ -63,3 +63,20 @@ func (c *Client) performChallenge(ctx context.Context, chal *acme.Challenge, add
 	_, err = c.client.WaitAuthorization(ctx, chal.URI)
 	return err
 }
+
+// authorize attempts to authorize the provided domain name in preparation for
+// obtaining a TLS certificate.
+func (c *Client) authorize(ctx context.Context, domain string, addr string) error {
+	auth, err := c.client.Authorize(ctx, domain)
+	if err != nil {
+		return err
+	}
+	if auth.Status == acme.StatusValid {
+		return nil
+	}
+	chal, err := findChallenge(auth)
+	if err != nil {
+		return err
+	}
+	return c.performChallenge(ctx, chal, addr)
+}
