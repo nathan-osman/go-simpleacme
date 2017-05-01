@@ -14,22 +14,19 @@ The following example demonstrates basic usage of go-simpleacme:
 
     ctx := context.TODO()
 
-    // Parameter is a path to the account key
-    // it will be created if it does not already exist
-    c, err := simpleacme.New("account.key")
-    if err != nil {
+    // Create the client
+    c := simpleacme.New()
+
+    // Initialize the client with a private key - if the file
+    // does not exist, a new key is generated
+    if err := c.Initialize(ctx, "account.key"); err != nil {
         // handle error
     }
 
-    // Authorize the domain name "example.com"
-    if err := c.Authorize(ctx, "example.com"); err != nil {
-        // handle error
-    }
-
-    // Obtain a certificate for a list of domain names
-    // a single certificate with multiple SANs will be issued
+    // Obtain a certificate for the list of domain names - the
+    // address is used for responding to challenges
     domains := []string{"example.com", "example.org"}
-    if err := c.Create(ctx, "test.key", "test.crt", domains...); err != nil {
+    if err := c.Create(ctx, "test.key", "test.crt", ":http", domains...); err != nil {
         // handle error
     }
 
