@@ -1,5 +1,8 @@
 ## go-simpleacme
 
+[![GoDoc](https://godoc.org/github.com/nathan-osman/go-simpleacme?status.svg)](https://godoc.org/github.com/nathan-osman/go-simpleacme)
+[![MIT License](http://img.shields.io/badge/license-MIT-9370d8.svg?style=flat)](http://opensource.org/licenses/MIT)
+
 The [golang.org/x/crypto/acme](https://godoc.org/golang.org/x/crypto/acme) package enables Go applications to obtain TLS certificates. However, the package is quite complex and using it in an application requires lots of boilerplate code. This package provides a much simpler interface, while still utilizing golang.org/x/crypto/acme behind the scenes.
 
 ### Usage
