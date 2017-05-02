@@ -12,15 +12,16 @@ import (
 
 // Manager manages certificates for a sequence of domain names
 type Manager struct {
-	add     chan []string
-	remove  chan []string
-	stop    chan bool
-	stopped chan bool
-	addr    string
-	dir     string
-	log     *logrus.Entry
-	client  *simpleacme.Client
-	certs   map[string]time.Time
+	add      chan []string
+	remove   chan []string
+	stop     chan bool
+	stopped  chan bool
+	addr     string
+	dir      string
+	callback func()
+	log      *logrus.Entry
+	client   *simpleacme.Client
+	certs    map[string]time.Time
 }
 
 // nextExpiry calculates when the next certificate will expire. If none are
@@ -35,6 +36,7 @@ func (m *Manager) nextExpiry() <-chan time.Time {
 			nextExpiry = expires
 		}
 	}
+	nextExpiry = nextExpiry.Add(-week)
 	m.log.Debugf("expiry timer set for %s", nextExpiry.String())
 	return time.After(nextExpiry.Sub(time.Now()))
 }
@@ -76,12 +78,16 @@ func (m *Manager) run() {
 			case <-ctx.Done():
 				return
 			}
+		} else {
+			if m.callback != nil {
+				m.callback()
+			}
 		}
 	}
 }
 
 // Create a new certificate manager using the specified address and directory.
-func New(ctx context.Context, addr, dir string) (*Manager, error) {
+func New(ctx context.Context, addr, dir string, callback func()) (*Manager, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
@@ -90,15 +96,16 @@ func New(ctx context.Context, addr, dir string) (*Manager, error) {
 		return nil, err
 	}
 	m := &Manager{
-		add:     make(chan []string),
-		remove:  make(chan []string),
-		stop:    make(chan bool),
-		stopped: make(chan bool),
-		addr:    addr,
-		dir:     dir,
-		log:     logrus.WithField("context", "manager"),
-		client:  c,
-		certs:   make(map[string]time.Time),
+		add:      make(chan []string),
+		remove:   make(chan []string),
+		stop:     make(chan bool),
+		stopped:  make(chan bool),
+		addr:     addr,
+		dir:      dir,
+		callback: callback,
+		log:      logrus.WithField("context", "manager"),
+		client:   c,
+		certs:    make(map[string]time.Time),
 	}
 	go m.run()
 	return m, nil

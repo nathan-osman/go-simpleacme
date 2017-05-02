@@ -5,7 +5,7 @@
 
 The [golang.org/x/crypto/acme](https://godoc.org/golang.org/x/crypto/acme) package enables Go applications to obtain TLS certificates. However, the package is quite complex and using it in an application requires lots of boilerplate code. This package provides a much simpler interface, while still utilizing golang.org/x/crypto/acme behind the scenes.
 
-### Usage
+### Basic Usage
 
 The following example demonstrates basic usage of go-simpleacme:
 
@@ -35,3 +35,28 @@ That's it! If everything went well, you will now have three new files in the cur
 - `account.key` the account key, which can be reused
 - `test.key` the private key for the certificate
 - `test.crt` the certificate bundle for the domain names
+
+### Advanced Usage
+
+go-simpleacme also provides a certificate manager:
+
+    import (
+        "context"
+
+        "github.com/nathan-osman/go-simpleacme/manager"
+    )
+
+    ctx := context.TODO()
+
+    // Create a certificate manager that will store all keys
+    // and certificates in /etc/certs
+    m, err := simpleacme.New(ctx, ":http", "/etc/certs", nil)
+    if err != nil {
+        // handle error
+    }
+    defer m.Close()
+
+    // Add a couple of domain names to the manager
+    m.Add(ctx, "example.com", "example.org")
+
+The manager will automatically obtain TLS certificates for the two domain names (combining them into a single certificate to reduce ACME requests). When the certificates are about to expire, they will be automatically renewed.
