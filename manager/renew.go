@@ -22,13 +22,13 @@ const (
 
 var errInvalidCert = errors.New("invalid certificate")
 
-// key determines the absolute filename for a private key.
-func (m *Manager) key(domain string) string {
+// Key determines the absolute filename for a private key.
+func (m *Manager) Key(domain string) string {
 	return path.Join(m.dir, fmt.Sprintf("%s.key", domain))
 }
 
-// cert determines the absolute filename for a certificate.
-func (m *Manager) cert(domain string) string {
+// Cert determines the absolute filename for a certificate.
+func (m *Manager) Cert(domain string) string {
 	return path.Join(m.dir, fmt.Sprintf("%s.crt", domain))
 }
 
@@ -58,11 +58,11 @@ func (m *Manager) findExpiring() []string {
 	)
 	for d, expires := range m.certs {
 		if expires.IsZero() {
-			if _, err := os.Stat(m.key(d)); err != nil {
+			if _, err := os.Stat(m.Key(d)); err != nil {
 				m.log.Debugf("cannot open private key for %s", d)
 				goto fail
 			}
-			e, err := readCert(m.cert(d))
+			e, err := readCert(m.Cert(d))
 			if err != nil {
 				m.log.Debugf("certificate for %s: %s", d, err)
 				goto fail
@@ -104,8 +104,8 @@ func (m *Manager) renew(ctx context.Context) error {
 	m.log.Debugf("%d domain(s) require renewal", len(domains))
 	if len(domains) != 0 {
 		var (
-			key  = m.key(domains[0])
-			cert = m.cert(domains[0])
+			key  = m.Key(domains[0])
+			cert = m.Cert(domains[0])
 		)
 		if err := m.client.Create(ctx, key, cert, m.addr, domains...); err != nil {
 			return err
@@ -116,10 +116,10 @@ func (m *Manager) renew(ctx context.Context) error {
 		}
 		m.certs[domains[0]] = e
 		for _, d := range domains[1:] {
-			if err := copyFile(key, m.key(d), 0600); err != nil {
+			if err := copyFile(key, m.Key(d), 0600); err != nil {
 				return err
 			}
-			if err := copyFile(cert, m.cert(d), 0644); err != nil {
+			if err := copyFile(cert, m.Cert(d), 0644); err != nil {
 				return err
 			}
 			m.certs[d] = e
