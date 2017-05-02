@@ -12,15 +12,30 @@ import (
 
 // Manager manages certificates for a sequence of domain names
 type Manager struct {
-	add        chan []string
-	remove     chan []string
-	stop       chan bool
-	stopped    chan bool
-	dir        string
-	log        *logrus.Entry
-	client     *simpleacme.Client
-	certs      map[string]time.Time
-	nextExpiry time.Time
+	add     chan []string
+	remove  chan []string
+	stop    chan bool
+	stopped chan bool
+	addr    string
+	dir     string
+	log     *logrus.Entry
+	client  *simpleacme.Client
+	certs   map[string]time.Time
+}
+
+// nextExpiry calculates when the next certificate will expire. If none are
+// expiring, nil is returned.
+func (m *Manager) nextExpiry() <-chan time.Time {
+	if len(m.certs) == 0 {
+		return nil
+	}
+	var nextExpiry time.Time
+	for _, expires := range m.certs {
+		if nextExpiry.IsZero() || expires.Before(nextExpiry) {
+			nextExpiry = expires
+		}
+	}
+	return time.After(nextExpiry.Sub(time.Now()))
 }
 
 // run monitors certificates for expiry and renews them if necessary.
@@ -32,10 +47,6 @@ func (m *Manager) run() {
 		cancel()
 	}()
 	for {
-		var nextExpiry <-chan time.Time
-		if !m.nextExpiry.IsZero() {
-			nextExpiry = time.After(m.nextExpiry.Sub(time.Now()))
-		}
 		select {
 		case domains := <-m.add:
 			for _, d := range domains {
@@ -45,8 +56,8 @@ func (m *Manager) run() {
 			for _, d := range domains {
 				delete(m.certs, d)
 			}
-		case <-nextExpiry:
-		case <-m.stop:
+		case <-m.nextExpiry():
+		case <-ctx.Done():
 			return
 		}
 		if err := m.renew(ctx); err != nil {
@@ -56,15 +67,15 @@ func (m *Manager) run() {
 			m.log.Error(err)
 			select {
 			case <-time.After(30 * time.Second):
-			case <-m.stop:
+			case <-ctx.Done():
 				return
 			}
 		}
 	}
 }
 
-// Create a new certificate manager using the specified directory.
-func New(ctx context.Context, dir string) (*Manager, error) {
+// Create a new certificate manager using the specified address and directory.
+func New(ctx context.Context, addr, dir string) (*Manager, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
@@ -77,6 +88,7 @@ func New(ctx context.Context, dir string) (*Manager, error) {
 		remove:  make(chan []string),
 		stop:    make(chan bool),
 		stopped: make(chan bool),
+		addr:    addr,
 		dir:     dir,
 		log:     logrus.WithField("context", "manager"),
 		client:  c,
