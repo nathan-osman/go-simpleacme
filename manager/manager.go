@@ -35,12 +35,14 @@ func (m *Manager) nextExpiry() <-chan time.Time {
 			nextExpiry = expires
 		}
 	}
+	m.log.Debugf("expiry timer set for %s", nextExpiry.String())
 	return time.After(nextExpiry.Sub(time.Now()))
 }
 
 // run monitors certificates for expiry and renews them if necessary.
 func (m *Manager) run() {
 	defer close(m.stopped)
+	defer m.log.Debug("main loop terminated")
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-m.stop
@@ -49,14 +51,17 @@ func (m *Manager) run() {
 	for {
 		select {
 		case domains := <-m.add:
+			m.log.Debugf("%d domain(s) added", len(domains))
 			for _, d := range domains {
 				m.certs[d] = time.Time{}
 			}
 		case domains := <-m.remove:
+			m.log.Debugf("%d domain(s) removed", len(domains))
 			for _, d := range domains {
 				delete(m.certs, d)
 			}
 		case <-m.nextExpiry():
+			m.log.Debug("expiration timer triggered")
 		case <-ctx.Done():
 			return
 		}
@@ -65,6 +70,7 @@ func (m *Manager) run() {
 				return
 			}
 			m.log.Error(err)
+			m.log.Debug("retrying in 30 seconds")
 			select {
 			case <-time.After(30 * time.Second):
 			case <-ctx.Done():

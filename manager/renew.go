@@ -50,7 +50,7 @@ func readCert(cert string) (time.Time, error) {
 	return c.NotAfter, nil
 }
 
-// find a list of domains that are expiring.
+// findExpiring determines which domains are expiring.
 func (m *Manager) findExpiring() []string {
 	var (
 		domains = []string{}
@@ -59,15 +59,19 @@ func (m *Manager) findExpiring() []string {
 	for d, expires := range m.certs {
 		if expires.IsZero() {
 			if _, err := os.Stat(m.key(d)); err != nil {
+				m.log.Debugf("cannot open private key for %s", d)
 				goto fail
 			}
 			e, err := readCert(m.cert(d))
 			if err != nil {
+				m.log.Debugf("certificate for %s: %s", d, err)
 				goto fail
 			}
+			expires = e
 			m.certs[d] = e
 		}
 		if now.Add(2 * week).After(expires) {
+			m.log.Debugf("certificate for %s expires soon", d)
 			goto fail
 		}
 		continue
@@ -97,6 +101,7 @@ func copyFile(src, dest string, perm os.FileMode) error {
 // about to expire.
 func (m *Manager) renew(ctx context.Context) error {
 	domains := m.findExpiring()
+	m.log.Debugf("%d domain(s) require renewal", len(domains))
 	if len(domains) != 0 {
 		var (
 			key  = m.key(domains[0])
