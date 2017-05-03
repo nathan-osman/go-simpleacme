@@ -10,6 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// CallbackFunc is run whenever the renew method runs.
+type CallbackFunc func(...string) error
+
 // Manager manages certificates for a sequence of domain names
 type Manager struct {
 	add      chan []string
@@ -18,7 +21,7 @@ type Manager struct {
 	stopped  chan bool
 	addr     string
 	dir      string
-	callback func()
+	callback CallbackFunc
 	log      *logrus.Entry
 	client   *simpleacme.Client
 	certs    map[string]time.Time
@@ -78,16 +81,12 @@ func (m *Manager) run() {
 			case <-ctx.Done():
 				return
 			}
-		} else {
-			if m.callback != nil {
-				m.callback()
-			}
 		}
 	}
 }
 
 // Create a new certificate manager using the specified address and directory.
-func New(ctx context.Context, addr, dir string, callback func()) (*Manager, error) {
+func New(ctx context.Context, addr, dir string, callback CallbackFunc) (*Manager, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}

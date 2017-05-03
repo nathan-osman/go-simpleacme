@@ -125,5 +125,10 @@ func (m *Manager) renew(ctx context.Context) error {
 			m.certs[d] = e
 		}
 	}
+	if m.callback != nil {
+		if err := m.callback(domains...); err != nil {
+			return err
+		}
+	}
 	return nil
 }
