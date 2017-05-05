@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/acme"
 )
 
+// Client facilitates the process of obtaining TLS certificates.
 type Client struct {
 	client *acme.Client
 	log    *logrus.Entry
