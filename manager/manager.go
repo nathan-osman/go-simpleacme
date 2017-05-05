@@ -10,6 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type domainList map[string]time.Time
+
 // Manager manages certificates for a sequence of domain names
 type Manager struct {
 	add      chan []string
@@ -18,10 +20,10 @@ type Manager struct {
 	stopped  chan bool
 	addr     string
 	dir      string
-	callback func() error
+	callback func(...string)
 	log      *logrus.Entry
 	client   *simpleacme.Client
-	certs    map[string]time.Time
+	certs    domainList
 }
 
 // nextExpiry calculates when the next certificate will expire. If none are
@@ -50,18 +52,32 @@ func (m *Manager) run() {
 		<-m.stop
 		cancel()
 	}()
+	var (
+		pendingDomains = make(domainList)
+		pendingTrigger <-chan time.Time
+	)
 	for {
 		select {
 		case domains := <-m.add:
-			m.log.Debugf("%d domain(s) added", len(domains))
+			m.log.Debugf("%d domain(s) marked to be added", len(domains))
 			for _, d := range domains {
 				m.certs[d] = time.Time{}
+				pendingDomains[d] = time.Time{}
 			}
+			pendingTrigger = time.After(10 * time.Second)
+			continue
 		case domains := <-m.remove:
 			m.log.Debugf("%d domain(s) removed", len(domains))
 			for _, d := range domains {
 				delete(m.certs, d)
+				delete(pendingDomains, d)
 			}
+			if len(pendingDomains) == 0 {
+				pendingTrigger = nil
+			}
+			continue
+		case <-pendingTrigger:
+			m.log.Debug("adding %d domain(s)", len(pendingDomains))
 		case <-m.nextExpiry():
 			m.log.Debug("expiration timer triggered")
 		case <-ctx.Done():
@@ -72,18 +88,17 @@ func (m *Manager) run() {
 				return
 			}
 			m.log.Error(err)
-			m.log.Debug("retrying in 30 seconds")
-			select {
-			case <-time.After(30 * time.Second):
-			case <-ctx.Done():
-				return
-			}
+			m.log.Debug("retrying in 10 seconds")
+			pendingTrigger = time.After(10 * time.Second)
+		} else {
+			pendingDomains = make(domainList)
+			pendingTrigger = nil
 		}
 	}
 }
 
 // Create a new certificate manager using the specified address and directory.
-func New(ctx context.Context, addr, dir string, callback func() error) (*Manager, error) {
+func New(ctx context.Context, addr, dir string, callback func(...string)) (*Manager, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
@@ -101,7 +116,7 @@ func New(ctx context.Context, addr, dir string, callback func() error) (*Manager
 		callback: callback,
 		log:      logrus.WithField("context", "manager"),
 		client:   c,
-		certs:    make(map[string]time.Time),
+		certs:    make(domainList),
 	}
 	go m.run()
 	return m, nil
