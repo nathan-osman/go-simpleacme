@@ -9,6 +9,7 @@ import (
 
 type Client struct {
 	client *acme.Client
+	log    *logrus.Entry
 }
 
 // New creates a new ACME client. If the key does not exist, a new one is
@@ -34,6 +35,7 @@ func New(ctx context.Context, key string) (*Client, error) {
 	}
 	return &Client{
 		client: client,
+		log:    logrus.WithField("context", "simpleacme"),
 	}, nil
 }
 

@@ -126,7 +126,7 @@ func (m *Manager) renew(ctx context.Context) error {
 		}
 	}
 	if m.callback != nil {
-		if err := m.callback(domains...); err != nil {
+		if err := m.callback(); err != nil {
 			return err
 		}
 	}

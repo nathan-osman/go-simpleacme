@@ -30,6 +30,7 @@ func findChallenge(auth *acme.Authorization) (*acme.Challenge, error) {
 // performChallenge creates a temporary server that ACME can access to verify
 // ownership of a domain name.
 func (c *Client) performChallenge(ctx context.Context, chal *acme.Challenge, addr string) error {
+	c.log.Debugf("attempting HTTP challenge on %s", addr)
 	response, err := c.client.HTTP01ChallengeResponse(chal.Token)
 	if err != nil {
 		return err
@@ -48,7 +49,7 @@ func (c *Client) performChallenge(ctx context.Context, chal *acme.Challenge, add
 	)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer l.Close()
 	go func() {
@@ -65,6 +66,7 @@ func (c *Client) performChallenge(ctx context.Context, chal *acme.Challenge, add
 // authorize attempts to authorize the provided domain name in preparation for
 // obtaining a TLS certificate.
 func (c *Client) authorize(ctx context.Context, domain string, addr string) error {
+	c.log.Debugf("authorizing %s", domain)
 	auth, err := c.client.Authorize(ctx, domain)
 	if err != nil {
 		return err
