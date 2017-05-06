@@ -77,7 +77,7 @@ func (m *Manager) run() {
 			}
 			continue
 		case <-pendingTrigger:
-			m.log.Debug("adding %d domain(s)", len(pendingDomains))
+			m.log.Debugf("adding %d domain(s)", len(pendingDomains))
 		case <-m.nextExpiry():
 			m.log.Debug("expiration timer triggered")
 		case <-ctx.Done():
