@@ -105,7 +105,9 @@ func (m *Manager) load() ([]string, []string) {
 func (m *Manager) renew(ctx context.Context) error {
 	loaded, expiring := m.load()
 	defer func() {
-		m.callback(loaded...)
+		if len(loaded) != 0 {
+			m.callback(loaded...)
+		}
 	}()
 	if len(expiring) != 0 {
 		var (
