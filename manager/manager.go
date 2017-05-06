@@ -29,14 +29,14 @@ type Manager struct {
 // nextExpiry calculates when the next certificate will expire. If none are
 // expiring, nil is returned.
 func (m *Manager) nextExpiry() <-chan time.Time {
-	if len(m.certs) == 0 {
-		return nil
-	}
 	var nextExpiry time.Time
 	for _, expires := range m.certs {
 		if nextExpiry.IsZero() || expires.Before(nextExpiry) {
 			nextExpiry = expires
 		}
+	}
+	if nextExpiry.IsZero() {
+		return nil
 	}
 	nextExpiry = nextExpiry.Add(-week)
 	m.log.Debugf("expiry timer set for %s", nextExpiry.String())
